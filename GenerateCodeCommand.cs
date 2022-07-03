@@ -1,10 +1,13 @@
-﻿using EnvDTE;
+﻿using CleanArchitectureCodeGenerator.Models;
+using CleanArchitectureCodeGenerator.Services;
+using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.ComponentModel.Design;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
@@ -127,12 +130,122 @@ namespace CleanArchitectureCodeGenerator
 
                     foreach (Project project in dte.Solution.Projects)
                     {
-                        //GenerateDataAccess(projectItem, solution2, project);
-                        GenerateHelpers.ShowMessageBox((IServiceProvider)ServiceProvider, "Test asd", "Generate etmeye hazir :)");
-                        //GenerateBusiness(projectItem, solution2, project);
+                        GenerateApplications(projectItem, solution2, project);
+                        GenerateInfrastructure(projectItem, solution2, project);
                     }
 
                     dialog.EndWaitDialog();
+                }
+            }
+        }
+
+        private void GenerateApplications(ProjectItem projectItem, Solution2 solution2, Project project)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var projectTemplate = solution2.GetProjectItemTemplate("Interface", "CSharp");
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(projectItem.Name);
+
+            if (project.Name.EndsWith("Application"))
+            {
+                foreach (ProjectItem item in project.ProjectItems)
+                {
+                    //GenerateHelpers.ShowMessageBox((IServiceProvider)ServiceProvider, item.Name, "as12asd");
+                    //if (item.ProjectItems.Count > 1)
+                    //{
+                    //    GenerateHelpers.ShowMessageBox((IServiceProvider)ServiceProvider, item.ProjectItems.Item(1).Name, "asd");
+                    //}
+                    var fileParameters = new CreateFileParameters
+                    {
+                        FileNameWithoutExtension = fileNameWithoutExtension,
+                        ProjectName = project.Name,
+                        ProjectTemplate = projectTemplate
+                    };
+
+                    foreach (ProjectItem item2 in item.ProjectItems)
+                    {
+                        fileParameters.ProjectItem = item2;
+                        if (item2.Name == "Repositories")
+                        {
+                            try
+                            {
+                                ApplicationFileService.CreateIRepository(fileParameters);
+
+                            } catch(Exception ex)
+                            {
+                                GenerateHelpers.ShowMessageBox((IServiceProvider)ServiceProvider, item.ProjectItems.Item(1).Name, ex.Message);
+                            }
+                        }
+
+                        if (item2.Name == "Services")
+                        {
+                            try
+                            {
+                                ApplicationFileService.CreateIService(fileParameters);
+
+                            }
+                            catch (Exception ex)
+                            {
+                                GenerateHelpers.ShowMessageBox((IServiceProvider)ServiceProvider, item.ProjectItems.Item(1).Name, ex.Message);
+                            }
+                        }
+                    }
+
+                    fileParameters.ProjectItem = item;
+
+
+                    if (item.Name == "Managers")
+                    {
+                        try
+                        {
+                            ApplicationFileService.CreateManager(fileParameters);
+                        }
+                        catch (Exception ex)
+                        {
+                            GenerateHelpers.ShowMessageBox((IServiceProvider)ServiceProvider, "Hata", ex.Message);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void GenerateInfrastructure(ProjectItem projectItem, Solution2 solution2, Project project)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var projectTemplate = solution2.GetProjectItemTemplate("Interface", "CSharp");
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(projectItem.Name);
+
+            if (project.Name.EndsWith("Infrastructure"))
+            {
+                foreach (ProjectItem item in project.ProjectItems)
+                {
+                    foreach (ProjectItem item2 in item.ProjectItems)
+                    {
+                        foreach (ProjectItem item3 in item2.ProjectItems)
+                        {
+                            var fileParameters = new CreateFileParameters
+                            {
+                                FileNameWithoutExtension = fileNameWithoutExtension,
+                                ProjectName = project.Name,
+                                ProjectItem = item3,
+                                ProjectTemplate = projectTemplate
+                            };
+                            if (item3.Name == "Repositories")
+                            {
+                                try
+                                {
+                                    InfrastructureFileService.CreateIRepository(fileParameters);
+
+                                }
+                                catch (Exception ex)
+                                {
+                                    GenerateHelpers.ShowMessageBox((IServiceProvider)ServiceProvider, item.ProjectItems.Item(1).Name, ex.Message);
+                                }
+                            }
+                        }
+                        
+                    }
                 }
             }
         }

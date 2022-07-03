@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace CleanArchitectureCodeGenerator
 {
@@ -24,25 +25,13 @@ namespace CleanArchitectureCodeGenerator
                         if (property is null)
                             continue;
 
-                        if (property.Namespace.Name == "Infrastructure.DBTable") return true;
+                        if (property.Namespace.Name.Contains("Models")) return true;
                     }
                 }
             }
             return false;
         }
-        public static void CreateFoldersIfNotExists(Project project, string[] folderNamesToCheck)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var projectPath = Path.GetDirectoryName(project.FullName);
-            foreach (var folderName in folderNamesToCheck)
-            {
-                if (!Directory.Exists(Path.Combine(projectPath, folderName)))
-                {
-                    project.ProjectItems.AddFolder(folderName);
-                }
-            }
 
-        }
         public static void ShowMessageBox(IServiceProvider serviceProvider, string message, string caption)
         {
             VsShellUtilities.ShowMessageBox(serviceProvider, message, caption, OLEMSGICON.OLEMSGICON_INFO,
@@ -65,6 +54,15 @@ namespace CleanArchitectureCodeGenerator
         internal static void ShowMessageBox(IServiceProvider serviceProvider, object noItemSelected, string name)
         {
             throw new NotImplementedException();
+        }
+
+
+        public static string GetFileContent(string fileName, string fileContent)
+        {
+            var fileNameCamelCase = fileName.First().ToString().ToLower() + fileName.Substring(1);
+            return fileContent
+                    .Replace("${camelModelName}", fileNameCamelCase)
+                    .Replace("${ModelName}", fileName);
         }
     }
 }
